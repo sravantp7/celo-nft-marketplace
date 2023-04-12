@@ -30,6 +30,13 @@ contract NFTMarketplace {
         address seller
     );
 
+    event ListingPurchased(
+        address nftAddress,
+        uint256 indexed tokenId,
+        address seller,
+        address buyer
+    );
+
     // Contract Address -> (Token ID -> Listing Data)
     mapping(address => mapping(uint256 => Listing)) public listings;
 
@@ -112,5 +119,29 @@ contract NFTMarketplace {
         listings[nftAddress][tokenId].price = newPrice;
 
         emit ListingUpdated(nftAddress, tokenId, newPrice, msg.sender);
+    }
+
+    // Purchase Listing
+    function purchaseListing(
+        address nftAddress,
+        uint256 tokenId
+    ) external payable isListed(nftAddress, tokenId) {
+        Listing memory listing = listings[nftAddress][tokenId];
+        require(msg.value == listing.price, "PRICE_ERROR");
+
+        // Delete listing from storage,
+        delete listings[nftAddress][tokenId];
+
+        // Transfer NFT from seller to buyer
+        IERC721(nftAddress).safeTransferFrom(
+            listing.seller,
+            msg.sender,
+            tokenId
+        );
+
+        (bool sent, ) = payable(listing.seller).call{value: listing.price}("");
+        require(sent, "TRANSFER_ERROR");
+
+        emit ListingPurchased(nftAddress, tokenId, listing.seller, msg.sender);
     }
 }
