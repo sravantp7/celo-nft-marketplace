@@ -17,6 +17,12 @@ contract NFTMarketplace {
         address seller
     );
 
+    event ListingCancelled(
+        address nftAddress,
+        uint256 indexed tokenId,
+        address seller
+    );
+
     // Contract Address -> (Token ID -> Listing Data)
     mapping(address => mapping(uint256 => Listing)) public listings;
 
@@ -72,5 +78,16 @@ contract NFTMarketplace {
         listings[nftAddress][tokenId] = newListing;
 
         emit ListingCreated(nftAddress, tokenId, price, msg.sender);
+    }
+
+    // Cancel NFT Listing
+    function cancelListing(
+        address nftAddress,
+        uint256 tokenId
+    ) external isListed(nftAddress, tokenId) isNFTOwner(nftAddress, tokenId) {
+        // Delete the Listing struct from the mapping
+        delete listings[nftAddress][tokenId];
+
+        emit ListingCancelled(nftAddress, tokenId, msg.sender);
     }
 }
